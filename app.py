@@ -1,10 +1,10 @@
-import flask
+from flask import Flask, render_template, request
 
-app = flask.Flask(__name__, static_folder='.', static_url_path='')
+app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return flask.__version__
+    return render_template("request.html",req=request)
 
 if __name__ == "__main__":
     app.run(port=8000, debug=True)
