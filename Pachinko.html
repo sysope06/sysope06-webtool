@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pachinko</title>
+    <meta charset="UTF-8">
+    <style>
+        #canvas
+        {
+            width:600px;
+            height:800px;
+            touch-action: none;
+        }
+    </style>
+    <script src="Tiny2D.js"></script>
+    <script>
+        "use strict";
+        var ctx, engine, offset = 0, catcher, score = 0, isMouseDown = false;
+        var walls = [
+            [-100, -100, 100, 800],
+            [-100, -100, 800, 100],
+            [ 500, -100, 100, 800],
+        ];
+        var lines = [
+            // [ 150,  -50, -50, 150],
+            [ 350,  -50, 550, 150],
+            [ 450,  200, 450, 800],
+        ];
+
+        function init() {
+            engine = new Engine(-100, -100, 700, 800, 0, 9.8);
+            var canvas = document.getElementById("canvas");
+            canvas.onmousedown = mymousedown;
+            canvas.onmouseup = mymouseup;
+            canvas.addEventListener("touchstart", mymousedown);
+            canvas.addEventListener("touchend", mymouseup);
+            canvas.oncontextment = function(e) { e.preventDefault(); };
+            walls.forEach(function(w) {
+                r = new RectangleEntity(w[0], w[1], w[2], w[3]);
+                r.color = "#FFFFFF";
+                engine.entities.push(r);
+            });
+            lines.forEach(function(w){
+                r = new LineEntity(w[0], w[1], w[2], w[3], 1.5);
+                r.color = "#FFFFFF";
+                engine.entities.push(r);
+            });
+            for (var i=0; i<9; i++) {
+                for (var j=0; j<7+i%2; j++) {
+                    var x = (j * 55 + 50) - 25 * (i % 2);
+                    var r = new CircleEntity(x, i * 50 + 100, 4, BodyStatic, 1);
+                    r.color = "#FFFFFF";
+                    engine.entities.push(r);
+                }
+            }
+
+            catcher = new RectangleEntity(0, 575, 125, 20);
+            catcher.color = "#FFFF33";
+            catcher.sign = 1;
+
+            engine.entities.push(catcher);
+
+            ctx = canvas.getContext("2d");
+            ctx.font = "20pt Arial";
+            ctx.strokeStyle = "#FFFFFF";
+            var SPEED = 15;
+            timer = setInterval(tick, SPEED);
+        }
+        
+        function tick() {
+            if (isMouseDown) {
+                offset = Math.min(offset + 5, 200);
+            }
+            catcher.sign *= (catcher.x > 300 || catcher.x < 0) ? -1 : 1;
+            catcher.x = catcher.x + 5 * catcher.sign;
+
+            engine.step(0.01);
+            repaint();
+        }
+
+        function mymousedown(e) {
+            isMouseDown = true;
+        }
+
+        function mymouseup(e) {
+            isMouseDown = false;
+            var BALL_SIZE = 16;
+            var r = new CircleEntity(475, 400, BALL_SIZE, BodyDynamic);
+            r.color = "#FFFFFF";
+            r.velocity.y = -offset / 5;
+            r.onhit = function(me, peer) {
+                if (peer == catcher) {
+                    engine.entities = engine.entities.filter(function(e) {
+                        return e != me;
+                    });
+                    score++;
+                }
+            }
+            offset = 0;
+            engine.entities.push(r);
+        }
+
+        function repaint() {
+            ctx.fillStyle = "#003300";
+            ctx.fillRect( 0, 0, 500, 600);
+
+            for (var i=0; i<engine.entities.length; i++) {
+                var e = engine.entities[i];
+                ctx.fillStyle = e.color;
+                switch(e.shape) {
+                    case ShapeCircle:
+                        ctx.beginPath();
+                        ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+                        ctx.closePath();
+                        ctx.fill();
+                        break;
+                    case ShapeRectangle:
+                        ctx.fillRect(e.x, e.y, e.w, e.h);
+                        break;
+                    case ShapeLine:
+                        ctx.beginPath();
+                        ctx.moveTo(e.x0, e.y0);
+                        ctx.lineTo(e.x1, e.y1);
+                        ctx.stroke();
+                        break;
+                }
+            }
+
+            ctx.fillText("点数 : " + score, 120, 30);
+            ctx.fillStyle = "#FFFFFF";
+            ctx.beginPath();
+            ctx.arc(475, 390 + offset, 10, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = "#FFFF33";
+            ctx.fillRect(455, 400 + offset, 40, 40);
+        }
+    </script>
+    
+</head>
+<body onload="init()">
+    <canvas id="canvas" width="500" height="600"></canvas>
+</body>
+</html>
